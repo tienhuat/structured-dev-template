@@ -167,8 +167,8 @@
     // 
     // IMPORTANT: Use bash explicitly because /bin/sh doesn't support 'source'
     // The virtual environment is already created in the Dockerfile
-    // This just installs the project in editable mode
-    "postCreateCommand": "bash -c 'source /home/vscode/.venv/bin/activate && uv pip install -e .'",
+    // This installs the project in editable mode from the src/ directory
+    "postCreateCommand": "bash -c 'cd src && source /home/vscode/.venv/bin/activate && uv pip install -e .'",
 
     // --------------------------------------------------------------------------
     // REMOTE USER
