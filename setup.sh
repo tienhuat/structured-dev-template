@@ -39,9 +39,12 @@ printf "\n"
 # ------------------------------------------------------------------------------
 printf "🔄 Ensuring Colima is running...\n"
 if ! colima status &> /dev/null; then
-    printf "   Starting Colima (this may take a minute)...\n"
-    colima start
-    printf "✅ Colima started successfully\n"
+    printf "   Starting Colima with recommended configuration (this may take a few minutes)...\n"
+    printf "   Configuration: 4 CPUs, 8GB RAM, 100GB disk, virtiofs mounting\n"
+    colima start --cpu 4 --memory 8 --disk 100 \
+      --mount-type=virtiofs \
+      --dns 1.1.1.1,8.8.8.8
+    printf "✅ Colima started successfully with optimized settings\n"
 else
     printf "✅ Colima is already running\n"
 fi

@@ -35,12 +35,31 @@ The architecture uses **Docker Compose overrides** where:
 
 **macOS (using Colima):**
 ```bash
-# Start Colima (Docker runtime for macOS)
-colima start
+# Install Colima (one-time setup)
+brew install colima
+
+# Start Colima with recommended configuration for development
+# 4 CPUs, 8GB RAM, 100GB disk, optimized file mounting
+colima start --cpu 4 --memory 8 --disk 100 \
+  --mount-type=virtiofs \
+  --dns 1.1.1.1,8.8.8.8
 
 # Verify Docker is running
 docker ps
 # Should show "CONTAINER ID   IMAGE   ..." header (no error)
+```
+
+**Recommended Colima Configuration Explained:**
+- `--cpu 4` - 4 CPU cores (adjust based on your machine)
+- `--memory 8` - 8GB RAM (minimum for comfortable development)  
+- `--disk 100` - 100GB disk space (plenty for containers and images)
+- `--mount-type=virtiofs` - Faster file system performance (macOS)
+- `--dns 1.1.1.1,8.8.8.8` - Reliable DNS (Cloudflare + Google)
+
+**Alternative quick start (if Colima already configured):**
+```bash
+# Just start with default settings (if previously configured)
+colima start
 ```
 
 **macOS (using Docker Desktop):**
@@ -722,6 +741,39 @@ direnv allow
 # Check .env file exists
 ls -la .env
 ```
+
+### Performance Issues (macOS Colima)
+
+**Slow file operations or container startup:**
+```bash
+# Stop current Colima instance
+colima stop
+
+# Start with optimized configuration
+colima start --cpu 4 --memory 8 --disk 100 \
+  --mount-type=virtiofs \
+  --dns 1.1.1.1,8.8.8.8
+
+# Verify the configuration
+colima status
+```
+
+**If you need to reconfigure existing Colima:**
+```bash
+# Delete current instance (loses containers but not images)
+colima delete
+
+# Start fresh with recommended settings
+colima start --cpu 4 --memory 8 --disk 100 \
+  --mount-type=virtiofs \
+  --dns 1.1.1.1,8.8.8.8
+```
+
+**Performance optimization explained:**
+- `--mount-type=virtiofs` - Much faster file system performance on macOS
+- `--cpu 4 --memory 8` - Adequate resources for development (adjust based on your Mac)
+- `--disk 100` - Sufficient space for containers and images
+- `--dns 1.1.1.1,8.8.8.8` - Reliable, fast DNS resolution
 
 ### General Issues
 - **Port conflicts**: Change ports in `docker-compose.yml`
