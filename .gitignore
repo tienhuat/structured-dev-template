@@ -45,7 +45,10 @@ venv.bak/
 *.sqlite3
 
 # IDE
-.vscode/
+# .vscode/ - Commit project-specific VS Code settings for this template
+# Only ignore user-specific VS Code files:
+.vscode/settings.json     # User-specific editor settings
+.vscode/extensions.json   # User-specific extension preferences (if any)
 .idea/
 *.swp
 *.swo

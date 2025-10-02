@@ -1,0 +1,144 @@
+{
+    // ==========================================================================
+    // VS CODE DEBUG CONFIGURATION
+    // ==========================================================================
+    // This file defines debug configurations for VS Code's built-in debugger.
+    // It tells VS Code how to run and debug your Python applications.
+    //
+    // Learn more: https://code.visualstudio.com/docs/editor/debugging
+    // ==========================================================================
+
+    // Version of the launch.json schema
+    // This ensures VS Code interprets the configuration correctly
+    "version": "0.2.0",
+    
+    // --------------------------------------------------------------------------
+    // DEBUG CONFIGURATIONS
+    // --------------------------------------------------------------------------
+    // Array of different ways to run/debug your application
+    // You can have multiple configurations for different scenarios
+    "configurations": [
+        {
+            // ------------------------------------------------------------------
+            // BASIC PYTHON DEBUG CONFIGURATION
+            // ------------------------------------------------------------------
+            
+            // Name shown in the debug dropdown (F5 or Run menu)
+            "name": "Run Hello World",
+            
+            // Type of debugger to use
+            // "debugpy" is the modern Python debugger (replaces older "python")
+            "type": "debugpy", 
+            
+            // How to start the debug session
+            // "launch": Start a new Python process
+            // "attach": Connect to an already running process
+            "request": "launch",
+            
+            // ------------------------------------------------------------------
+            // FILE AND PATH CONFIGURATION
+            // ------------------------------------------------------------------
+            
+            // Path to the Python file to run
+            // ${workspaceFolder} is a VS Code variable that resolves to the
+            // root folder opened in VS Code (/workspace in the container)
+            "program": "${workspaceFolder}/src/main.py",
+            
+            // Working directory when the program runs
+            // This affects where relative file paths are resolved from
+            "cwd": "${workspaceFolder}/src",
+            
+            // ------------------------------------------------------------------
+            // DEBUG INTERFACE OPTIONS
+            // ------------------------------------------------------------------
+            
+            // Where to show program output and accept input
+            // "integratedTerminal": Use VS Code's built-in terminal
+            // "internalConsole": Use VS Code's debug console (output only)
+            // "externalTerminal": Use system terminal (outside VS Code)
+            "console": "integratedTerminal",
+            
+            // ------------------------------------------------------------------
+            // ENVIRONMENT CONFIGURATION
+            // ------------------------------------------------------------------
+            
+            // Automatically load environment variables from .env file
+            // This solves the issue where direnv variables aren't available in debugger
+            "envFile": "${workspaceFolder}/.env"
+            
+            // ------------------------------------------------------------------
+            // ADDITIONAL OPTIONS (commented out - add as needed)
+            // ------------------------------------------------------------------
+            
+            // Command line arguments to pass to the program
+            // "args": ["--verbose", "--config", "config.json"],
+            
+            // Environment variables for the program
+            // "env": {
+            //     "DEBUG": "true",
+            //     "LOG_LEVEL": "debug"
+            // },
+            
+            // Stop at the first line of the program (for debugging startup)
+            // "stopOnEntry": true,
+            
+            // Automatically restart when files change (for development)
+            // "restart": true,
+            
+            // Debug sub-processes spawned by the main process
+            // "subProcess": true,
+            
+            // Path to Python interpreter (if different from default)
+            // "python": "/usr/local/bin/python3",
+            
+            // Enable debugging of library code (not just your code)
+            // "justMyCode": false,
+        }
+        
+        // ------------------------------------------------------------------
+        // EXAMPLE: ADDITIONAL CONFIGURATION (commented out)
+        // ------------------------------------------------------------------
+        // You can add more configurations for different scenarios:
+        
+        // {
+        //     "name": "Run with Arguments",
+        //     "type": "debugpy",
+        //     "request": "launch",
+        //     "program": "${workspaceFolder}/src/main.py",
+        //     "args": ["--verbose"],
+        //     "cwd": "${workspaceFolder}/src",
+        //     "console": "integratedTerminal"
+        // },
+        
+        // {
+        //     "name": "Debug Tests",
+        //     "type": "debugpy",
+        //     "request": "launch",
+        //     "module": "pytest",
+        //     "args": ["tests/"],
+        //     "cwd": "${workspaceFolder}",
+        //     "console": "integratedTerminal"
+        // }
+    ]
+    
+    // ==========================================================================
+    // TIPS FOR LEARNING:
+    // ==========================================================================
+    // 1. Start debugging: Press F5 or Run → Start Debugging
+    // 2. Set breakpoints: Click left of line numbers (red dot appears)
+    // 3. Step through code: F10 (step over), F11 (step into), Shift+F11 (step out)
+    // 4. View variables: Check Variables panel or hover over variables in code
+    // 5. Debug console: Type expressions to evaluate during debugging
+    // 6. Call stack: See which functions called the current function
+    // 7. Watch expressions: Add variables/expressions to monitor continuously
+    // 
+    // COMMON DEBUGGING WORKFLOW:
+    // 1. Set breakpoints where you want to pause execution
+    // 2. Press F5 to start debugging
+    // 3. Program runs until it hits a breakpoint
+    // 4. Use Variables panel to inspect current state
+    // 5. Use F10/F11 to step through code line by line
+    // 6. Use Debug Console to test expressions or modify variables
+    // 7. Press F5 again to continue running until next breakpoint
+    // ==========================================================================
+}
