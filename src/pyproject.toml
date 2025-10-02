@@ -1,0 +1,240 @@
+# ==============================================================================
+# PYTHON PROJECT CONFIGURATION (pyproject.toml)
+# ==============================================================================
+# This file is the modern standard for Python project configuration.
+# It replaces older files like setup.py, requirements.txt, and setup.cfg.
+#
+# Learn more: https://peps.python.org/pep-0518/
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# BUILD SYSTEM CONFIGURATION
+# ------------------------------------------------------------------------------
+# Defines how to build Python packages (wheels, source distributions)
+[build-system]
+# Build tools required to build this project
+# Hatchling is a modern, fast build backend
+requires = ["hatchling"]
+
+# The build backend to use (replaces setup.py)
+# This is what pip uses internally when installing your package
+build-backend = "hatchling.build"
+
+# ------------------------------------------------------------------------------
+# PROJECT METADATA
+# ------------------------------------------------------------------------------
+# Basic information about your Python project
+[project]
+# Package name (used when publishing to PyPI or installing locally)
+# Must be unique if you plan to publish publicly
+name = "dev-container-python"
+
+# Semantic versioning (major.minor.patch)
+# Increment when you make changes: patch for bugs, minor for features, major for breaking changes
+version = "0.1.0"
+
+# Short description of what your project does
+description = "Python development environment with uv"
+
+# Project maintainers (used in package metadata)
+# Replace with your actual name and email when publishing
+authors = [
+    {name = "Your Name", email = "your.email@example.com"}
+]
+
+# ------------------------------------------------------------------------------
+# DEPENDENCIES
+# ------------------------------------------------------------------------------
+
+# Minimum Python version required
+# This enforces compatibility and allows use of newer language features
+requires-python = ">=3.13"
+
+# ------------------------------------------------------------------------------
+# HATCHLING BUILD CONFIGURATION
+# ------------------------------------------------------------------------------
+# Tells Hatchling which files to include in the package
+# Without this, Hatchling looks for a directory matching the package name
+# and will fail if it doesn't find one
+[tool.hatch.build.targets.wheel]
+# Include all Python files in the current directory (where pyproject.toml is)
+# "." means the root of the project (where this file is located)
+packages = ["."]
+
+# Alternative approach if you organize code in subdirectories:
+# packages = ["src/mypackage"]  # If you have a src/mypackage/ directory
+# packages = ["mypackage"]       # If you have a mypackage/ directory at project root
+
+# ------------------------------------------------------------------------------
+# OPTIONAL DEPENDENCIES
+# ------------------------------------------------------------------------------
+# Extra dependencies grouped by purpose
+# 
+# HOW THE SYSTEM KNOWS WHICH DEPENDENCIES TO INSTALL:
+# The system doesn't automatically detect environment - YOU control it!
+#
+# Install ONLY production dependencies:
+#   uv pip install -e .
+#   (Installs only [project.dependencies])
+#
+# Install production + dev dependencies:
+#   uv pip install -e ".[dev]"
+#   (Installs [project.dependencies] + [project.optional-dependencies.dev])
+#
+# The ".[dev]" syntax means:
+#   .     = Current directory (reads pyproject.toml)
+#   [dev] = Also install the "dev" optional dependency group
+#
+# WHERE THIS HAPPENS IN THIS PROJECT:
+# - Base Dockerfile:       uv pip install --system .         (NO dev deps)
+# - Dockerfile.dev:        Explicitly installs dev tools     (HAS dev deps)
+# - Dockerfile.prod:       Uses base (inherited)             (NO dev deps)
+# - devcontainer.json:     uv pip install -e .              (NO dev deps)
+#
+[project.optional-dependencies]
+
+# Development tools (not needed for production)
+dev = [
+    # Code formatter (enforces consistent style)
+    "black",
+    
+    # Code linter (finds style issues and potential bugs)
+    "flake8",
+    
+    # Testing framework with coverage reporting
+    "pytest-cov",
+    
+    # Static type checker (catches type-related bugs)
+    "mypy"
+]
+
+# EXAMPLES of other optional dependency groups:
+# 
+# docs = [
+#     "sphinx",
+#     "sphinx-rtd-theme"
+# ]
+# 
+# test = [
+#     "pytest",
+#     "pytest-mock"
+# ]
+# 
+# web = [
+#     "fastapi",
+#     "uvicorn"
+# ]
+
+# ==============================================================================
+# TOOL CONFIGURATION
+# ==============================================================================
+# Configuration for development tools used in this project
+# This keeps all tool configs in one place instead of separate files
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# BLACK CODE FORMATTER
+# ------------------------------------------------------------------------------
+# Automatically formats Python code to enforce consistent style
+[tool.black]
+# Maximum line length (PEP 8 recommends 79, but 88 is Black's default)
+line-length = 88
+
+# Python version to target (affects which syntax features to use)
+target-version = ['py313']
+
+# ADDITIONAL BLACK OPTIONS (commented out):
+# include = '\.pyi?$'          # File patterns to include
+# exclude = '''                # File patterns to exclude
+# /(
+#     \.git
+#   | \.mypy_cache
+#   | \.tox
+#   | \.venv
+#   | _build
+#   | buck-out
+#   | build
+#   | dist
+# )/
+# '''
+
+# ------------------------------------------------------------------------------
+# FLAKE8 LINTER
+# ------------------------------------------------------------------------------
+# Checks code for style issues and potential bugs
+[tool.flake8]
+# Match Black's line length to avoid conflicts
+max-line-length = 88
+
+# Ignore specific error codes that conflict with Black formatting
+# E203: whitespace before ':' (Black formats this differently)
+# W503: line break before binary operator (Black prefers this style)
+extend-ignore = ["E203", "W503"]
+
+# ADDITIONAL FLAKE8 OPTIONS (commented out):
+# max-complexity = 10          # Maximum cyclomatic complexity
+# exclude = [".git", "__pycache__", ".tox", ".venv"]
+# per-file-ignores = [
+#     "__init__.py:F401",      # Allow unused imports in __init__.py
+# ]
+
+# ------------------------------------------------------------------------------
+# PYTEST TEST RUNNER
+# ------------------------------------------------------------------------------
+# Configuration for running unit tests
+[tool.pytest.ini_options]
+# Directories to search for test files
+testpaths = ["tests"]
+
+# File naming patterns that pytest will recognize as test files
+python_files = ["test_*.py", "*_test.py"]
+
+# ADDITIONAL PYTEST OPTIONS (commented out):
+# python_classes = ["Test*"]   # Class naming patterns for tests
+# python_functions = ["test_*"] # Function naming patterns for tests
+# addopts = [                  # Default command line options
+#     "--strict-markers",
+#     "--strict-config",
+#     "--verbose",
+#     "--cov=src",             # Generate coverage report for src/ directory
+#     "--cov-report=term-missing",
+#     "--cov-report=html",
+# ]
+# markers = [                  # Custom test markers
+#     "slow: marks tests as slow",
+#     "integration: marks tests as integration tests",
+# ]
+
+# ==============================================================================
+# TIPS FOR LEARNING:
+# ==============================================================================
+# 
+# DEPENDENCY MANAGEMENT:
+# 1. Add production deps to dependencies = []
+# 2. Add dev tools to [project.optional-dependencies.dev]
+# 3. Install everything: uv pip install -e ".[dev]"
+# 4. Install only production deps: uv pip install -e .
+# 5. Use version constraints wisely: >= for flexibility, == for exact control
+# 
+# TOOL CONFIGURATION:
+# 1. All tool configs can live in this one file
+# 2. Run tools: black ., flake8 ., pytest
+# 3. Many editors can read these configs automatically
+# 4. CI/CD systems can use the same configs
+# 
+# PACKAGE BUILDING:
+# 1. Build package: python -m build
+# 2. Install locally: pip install -e .
+# 3. The -e flag means "editable" - changes to code immediately affect installation
+# 
+# VERSION MANAGEMENT:
+# 1. Update version number when releasing new versions
+# 2. Use semantic versioning: MAJOR.MINOR.PATCH
+# 3. Tools like bump2version can automate version updates
+# 
+# MODERN PYTHON PRACTICES:
+# 1. pyproject.toml replaces setup.py, setup.cfg, requirements.txt
+# 2. Build backends like Hatchling are faster than setuptools
+# 3. Optional dependencies allow flexible installation
+# 4. Tool configuration in pyproject.toml keeps everything organized
+# ==============================================================================

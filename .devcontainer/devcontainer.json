@@ -1,0 +1,191 @@
+{
+    // ==========================================================================
+    // VS CODE DEV CONTAINERS CONFIGURATION
+    // ==========================================================================
+    // This file configures VS Code's Dev Containers extension to create a
+    // consistent development environment that works the same way for all team
+    // members, regardless of their local machine setup.
+    //
+    // Learn more: https://containers.dev/
+    // ==========================================================================
+
+    // --------------------------------------------------------------------------
+    // CONTAINER IDENTIFICATION
+    // --------------------------------------------------------------------------
+    // Human-readable name shown in VS Code's UI
+    "name": "Python Multi-Container Development Environment",
+
+    // --------------------------------------------------------------------------
+    // DOCKER COMPOSE INTEGRATION
+    // --------------------------------------------------------------------------
+    // Use Docker Compose to define the container instead of a single Dockerfile
+    // Benefits: Can define multiple services, networks, volumes in one place
+    "dockerComposeFile": [
+        "../docker-compose.yml",
+        "../docker-compose.dev.yml"
+    ],
+
+    // Which service from docker-compose to use as the development container
+    // The Dev Containers extension will attach to this specific service
+    // Using 'dev-container' which has vscode user and proper development setup
+    "service": "dev-container",
+
+    // --------------------------------------------------------------------------
+    // WORKSPACE CONFIGURATION
+    // --------------------------------------------------------------------------
+    // Path inside the container where VS Code should open
+    // This becomes the root of your workspace in the container
+    "workspaceFolder": "/workspace",
+    
+    // --------------------------------------------------------------------------
+    // VS CODE CUSTOMIZATION
+    // --------------------------------------------------------------------------
+    "customizations": {
+        "vscode": {
+            // ------------------------------------------------------------------
+            // EXTENSIONS
+            // ------------------------------------------------------------------
+            // Extensions to automatically install in the container
+            // These ensure all team members have the same development tools
+            "extensions": [
+                // Python language support (syntax highlighting, IntelliSense)
+                "ms-python.python",
+                
+                // Enhanced Python language server (faster, more accurate)
+                "ms-python.pylance", 
+                
+                // Python debugger (set breakpoints, inspect variables)
+                "ms-python.debugpy",
+                
+                // Flake8 linter (catches code style issues and potential bugs)
+                "ms-python.flake8",
+                
+                // Black code formatter (enforces consistent code style)
+                "ms-python.black-formatter",
+                
+                // JSON file support (syntax highlighting, validation)
+                "ms-vscode.vscode-json",
+                
+                // YAML file support (for docker-compose files)
+                "redhat.vscode-yaml"
+            ],
+
+            // ------------------------------------------------------------------
+            // EDITOR SETTINGS
+            // ------------------------------------------------------------------
+            // Settings applied to VS Code when working in this container
+            // These override user settings to ensure team consistency
+            "settings": {
+                // Python interpreter path inside the container
+                // Points to the virtual environment's Python binary
+                "python.defaultInterpreterPath": "/home/vscode/.venv/bin/python",
+
+                // Terminal settings
+                // Automatically activate virtual environment in new terminals
+                "python.terminal.activateEnvironment": true,
+
+                // Code formatting
+                // Automatically format code when saving files
+                "editor.formatOnSave": true,
+
+                // Linting (code quality checks)
+                // Enable Flake8 to check code as you type
+                "python.linting.enabled": true,
+                "python.linting.flake8Enabled": true,
+
+                // Debugging settings
+                // Use internal console for cleaner debug output
+                "python.debugging.console": "internalConsole"
+            }
+        }
+    },
+    
+    // --------------------------------------------------------------------------
+    // PORT FORWARDING
+    // --------------------------------------------------------------------------
+    // Ports to automatically forward from container to host
+    // 
+    // How it works:
+    // - Application runs INSIDE container on port 8000
+    // - VS Code forwards that port to your HOST machine
+    // - You access it on your host at: http://localhost:8000
+    // 
+    // Direction: Container Port → Host Port
+    // Example: Container:8000 becomes accessible at Host:localhost:8000
+    "forwardPorts": [8000, 5678],
+    
+    // --------------------------------------------------------------------------
+    // PORT FORWARDING BEHAVIOR
+    // --------------------------------------------------------------------------
+    // Configure how VS Code notifies you when ports are forwarded
+    // 
+    // When a port is forwarded, VS Code can show a popup notification
+    // in the bottom-right corner with a clickable link
+    "portsAttributes": {
+        "8000": {
+            "label": "Python App",
+            // "notify": Show popup notification when this port forwards
+            // 
+            // You'll see a notification like:
+            // ┌─────────────────────────────────────┐
+            // │ Port 8000 is now available          │
+            // │ Python App                          │
+            // │ [Open in Browser] [Dismiss]        │
+            // └─────────────────────────────────────┘
+            // 
+            // Why notify? This is your main application port - you want
+            // to know when it's ready and get a quick link to open it
+            "onAutoForward": "notify"
+        },
+        "5678": {
+            "label": "Debug Port",
+            // "ignore": Don't show notification (silent forwarding)
+            // 
+            // Port 5678 forwards silently in the background
+            // No popup appears - prevents notification spam
+            // 
+            // Why ignore? This is an internal debug port used by VS Code's
+            // debugger extension. You never manually access it in a browser,
+            // so the notification would just be noise/distraction
+            "onAutoForward": "ignore"
+        }
+    },
+    
+    // --------------------------------------------------------------------------
+    // PORT FORWARDING DEFAULTS
+    // --------------------------------------------------------------------------
+    // Prevent unwanted port forwarding popups for other ports
+    "otherPortsAttributes": {
+        "onAutoForward": "ignore"
+    },
+    
+    // --------------------------------------------------------------------------
+    // LIFECYCLE SCRIPTS
+    // --------------------------------------------------------------------------
+    // Command to run after the container is created (first time only)
+    // Installs project dependencies using uv package manager
+    // 
+    // IMPORTANT: Use bash explicitly because /bin/sh doesn't support 'source'
+    // The virtual environment is already created in the Dockerfile
+    // This just installs the project in editable mode
+    "postCreateCommand": "bash -c 'source /home/vscode/.venv/bin/activate && uv pip install -e .'",
+
+    // --------------------------------------------------------------------------
+    // REMOTE USER
+    // --------------------------------------------------------------------------
+    // User account to use when connecting to the container
+    // Using non-root user is a security best practice
+    "remoteUser": "vscode"
+
+    // ==========================================================================
+    // TIPS FOR LEARNING:
+    // ==========================================================================
+    // 1. To rebuild the container: Cmd+Shift+P → "Dev Containers: Rebuild Container"
+    // 2. To see container logs: Cmd+Shift+P → "Dev Containers: Show Container Log"
+    // 3. To open a new terminal in container: Ctrl+` (backtick)
+    // 4. All file changes are immediately synced between host and container
+    // 5. Extensions install only in the container, not on your host machine
+    // 6. Settings in this file override your personal VS Code settings
+    // 7. Port forwarding happens automatically - no manual setup needed
+    // ==========================================================================
+}

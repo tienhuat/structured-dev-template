@@ -1,0 +1,177 @@
+# ==============================================================================
+# DOCKER COMPOSE DEVELOPMENT OVERRIDES
+# ==============================================================================
+# This file contains ONLY development-specific configuration differences.
+# It merges with docker-compose.yml to create the complete dev environment.
+#
+# Purpose: Add debugging capabilities, dev tools, and development-friendly settings
+# without duplicating all the common configuration from the base file.
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+#
+# This follows the Override Pattern:
+# - Base file (docker-compose.yml): 90% of configuration
+# - Override file (this file): 10% of environment-specific differences
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# SERVICE OVERRIDES
+# ------------------------------------------------------------------------------
+services:
+  
+  # ----------------------------------------------------------------------------
+  # PYTHON APPLICATION - DEVELOPMENT CUSTOMIZATIONS
+  # ----------------------------------------------------------------------------
+  # Only specify what's DIFFERENT from base configuration
+  # Everything else is inherited from docker-compose.yml
+  python-app:
+    
+    # -------------------------------------------------------------------------
+    # BUILD CONFIGURATION
+    # -------------------------------------------------------------------------
+    build:
+      # 🔄 OVERRIDE: Use development Dockerfile instead of base
+      # Dockerfile.dev includes:
+      # - debugpy (remote debugging)
+      # - pytest (testing)
+      # - black, flake8, mypy (code quality)
+      # - ipython (enhanced REPL)
+      # Path is relative to context (./src) not to this file!
+      dockerfile: Dockerfile.dev
+    
+    # -------------------------------------------------------------------------
+    # CONTAINER NAME
+    # -------------------------------------------------------------------------
+    # 🔄 OVERRIDE: Add "-dev" suffix to distinguish from prod
+    # This allows dev and prod to run simultaneously (if needed)
+    container_name: python-app-dev
+    
+    # -------------------------------------------------------------------------
+    # PORT MAPPINGS
+    # -------------------------------------------------------------------------
+    # ⚠️ IMPORTANT: Arrays are REPLACED, not merged in Docker Compose!
+    # We must repeat the base port (8000) even though it's in docker-compose.yml
+    ports:
+      # 🔄 REPEAT: Application port (from base file)
+      - "8000:8000"
+      # ➕ ADD: Debug port for VS Code remote debugging
+      # debugpy listens on 5678 for VS Code debugger connections
+      - "5678:5678"
+    
+    # -------------------------------------------------------------------------
+    # ENVIRONMENT VARIABLES
+    # -------------------------------------------------------------------------
+    # ⚠️ Arrays are REPLACED! Must repeat base environment variables
+    environment:
+      # 🔄 REPEAT: From base file (required for real-time logs)
+      - PYTHONUNBUFFERED=1
+      # ➕ ADD: Enable debug mode
+      # Your application can check this: if os.getenv('DEBUG') == 'true'
+      - DEBUG=true
+      # ➕ ADD: Environment marker
+      # Useful for conditional logic: if os.getenv('ENV') == 'development'
+      - ENV=development
+    
+    # -------------------------------------------------------------------------
+    # RESOURCE LIMITS
+    # -------------------------------------------------------------------------
+    # ➕ ADD: Light resource constraints for development
+    # This prevents dev environment from consuming too many resources
+    # Note: These are looser than production limits
+    deploy:
+      resources:
+        # Maximum resources this container can use
+        limits:
+          cpus: '1.0'      # Max 1 CPU core (100% of 1 core)
+          memory: 512M     # Max 512 MB RAM
+        # Guaranteed resources (reserved for this container)
+        reservations:
+          cpus: '0.25'     # Reserve 25% of 1 CPU core
+          memory: 128M     # Reserve 128 MB RAM
+    
+  # dev-container: Uses base configuration as-is (no overrides needed)
+
+# ==============================================================================
+# WHAT GETS MERGED:
+# ==============================================================================
+#
+# When you run:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+#
+# The final configuration for python-app service becomes:
+#
+# python-app:
+#   build:
+#     context: ./src              # From base
+#     dockerfile: Dockerfile.dev   # From dev (overrides base)
+#   container_name: python-app-dev # From dev (overrides base)
+#   ports:
+#     - "8000:8000"               # From dev (replaces base array)
+#     - "5678:5678"               # From dev (replaces base array)
+#   volumes:
+#     - ./src:/app:cached         # From base (not overridden)
+#   environment:
+#     - PYTHONUNBUFFERED=1         # From dev (replaces base array)
+#     - DEBUG=true                # From dev (replaces base array)
+#     - ENV=development           # From dev (replaces base array)
+#   networks:
+#     - app-network               # From base (not overridden)
+#   depends_on:
+#     - python-base               # From base (not overridden)
+#   restart: unless-stopped       # From base (not overridden)
+#   deploy:                       # From dev (added)
+#     resources:
+#       limits:
+#         cpus: '1.0'
+#         memory: 512M
+#       reservations:
+#         cpus: '0.25'
+#         memory: 128M
+#
+# ==============================================================================
+# DEVELOPMENT FEATURES:
+# ==============================================================================
+#
+# ✓ Code Mounting: Changes to ./src immediately reflect in container
+# ✓ Remote Debugging: VS Code can attach to port 5678
+# ✓ Dev Tools: pytest, black, flake8, mypy available
+# ✓ Debug Mode: Application knows it's in development
+# ✓ Light Resources: Won't consume all your laptop's resources
+# ✓ Container Stays Running: Use tail -f /dev/null (in Dockerfile.dev)
+# ✓ Hot Reload: Code changes don't require container restart
+# ✓ Interactive Development: Run commands manually in terminal
+#
+# ==============================================================================
+# DEVELOPMENT WORKFLOW:
+# ==============================================================================
+#
+# 1. Start development environment:
+#    docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+#
+# 2. Open in VS Code:
+#    - Install Dev Containers extension
+#    - Click "Reopen in Container" or "Attach to Running Container"
+#
+# 3. Code in VS Code:
+#    - Edit files in ./src
+#    - Changes immediately available in container
+#    - No rebuild needed (code is mounted, not copied)
+#
+# 4. Debug:
+#    - Set breakpoints in VS Code
+#    - Press F5 to start debugging
+#    - Debugger connects via port 5678
+#
+# 5. Run tests:
+#    docker compose -f ... -f ... exec python-app pytest
+#    Or from VS Code terminal: pytest
+#
+# 6. Check code quality:
+#    docker compose -f ... -f ... exec python-app black .
+#    docker compose -f ... -f ... exec python-app flake8 .
+#
+# 7. Stop:
+#    docker compose -f docker-compose.yml -f docker-compose.dev.yml down
+#
+# ==============================================================================

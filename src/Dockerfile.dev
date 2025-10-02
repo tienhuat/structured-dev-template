@@ -1,0 +1,142 @@
+# ==============================================================================
+# DEVELOPMENT DOCKERFILE - EXTENDS BASE WITH DEV TOOLS
+# ==============================================================================
+# This Dockerfile extends the base Dockerfile by adding development-specific
+# tools and configurations. It inherits all the base setup and adds more.
+#
+# Purpose: Create a development environment with debugging, testing, and
+# code quality tools that aren't needed in production.
+#
+# Build Pattern: Base → Dev (inheritance/extension pattern)
+# ==============================================================================
+
+# -----------------------------------------------------------------------------
+# INHERITANCE: EXTEND BASE IMAGE
+# -----------------------------------------------------------------------------
+# Start FROM the base image we built (Dockerfile)
+# This gives us:
+# - Python 3.13 runtime
+# - uv package manager
+# - Project dependencies
+# - Application code
+# - Non-root user (appuser)
+# - Base CMD and EXPOSE directives
+#
+# We only add development-specific features on top!
+FROM python-dev-base:latest
+
+# -----------------------------------------------------------------------------
+# SWITCH TO ROOT FOR INSTALLATIONS
+# -----------------------------------------------------------------------------
+# Development tools need system-level installation
+# We'll switch back to appuser after installation for security
+USER root
+
+# -----------------------------------------------------------------------------
+# DEVELOPMENT DEPENDENCIES
+# -----------------------------------------------------------------------------
+# Install tools that help during development but aren't needed in production
+#
+# NOTE: We install these INDIVIDUALLY, not using pyproject.toml's [dev] group
+# Why? Because Dockerfile.dev extends the base image which already installed
+# the core dependencies. We only add dev-specific tools here.
+#
+# Alternative approach would be:
+#   RUN uv pip install --system ".[dev]"
+# But that would reinstall all dependencies from scratch.
+RUN uv pip install --system \
+    # debugpy: Remote debugging - allows VS Code to attach to running container
+    # VS Code connects to port 5678 and you can set breakpoints, inspect variables
+    debugpy \
+    # pytest: Testing framework - run unit tests, integration tests
+    pytest \
+    # pytest-cov: Test coverage reporter - shows which code is tested
+    pytest-cov \
+    # black: Code formatter - automatically formats code to standard style
+    black \
+    # flake8: Code linter - finds style issues and potential bugs
+    flake8 \
+    # mypy: Static type checker - catches type-related bugs before runtime
+    mypy \
+    # ipython: Enhanced Python REPL - better than default python shell
+    ipython
+
+# -----------------------------------------------------------------------------
+# RESTORE NON-ROOT USER
+# -----------------------------------------------------------------------------
+# Switch back to non-root user for security
+# All runtime operations should run as appuser, not root
+USER appuser
+
+# -----------------------------------------------------------------------------
+# NETWORK PORTS
+# -----------------------------------------------------------------------------
+# Document which ports this development container uses
+# Port 8000: Application port (inherited from base, repeated for clarity)
+# Port 5678: Debug port for debugpy - VS Code connects here
+#
+# Why two ports?
+# - 8000: Your application's HTTP server (if you add one)
+# - 5678: Debugpy listens here for VS Code debugger connections
+EXPOSE 8000
+EXPOSE 5678
+
+# -----------------------------------------------------------------------------
+# DEVELOPMENT STARTUP COMMAND
+# -----------------------------------------------------------------------------
+# Keep container running indefinitely without executing the application
+# This allows:
+# - VS Code to connect and start debugging sessions
+# - Interactive development (run commands manually)
+# - Restart application without restarting container
+# - Use VS Code's integrated terminal inside the container
+CMD ["tail", "-f", "/dev/null"]
+
+# ==============================================================================
+# DEVELOPMENT vs PRODUCTION DIFFERENCES:
+# ==============================================================================
+#
+# DEVELOPMENT (this file):
+# ✓ Debug tools installed (debugpy, pytest, etc.)
+# ✓ Debug port exposed (5678)
+# ✓ Container stays running (tail -f /dev/null)
+# ✓ Code mounted from host (in docker-compose.dev.yml)
+# ✓ Slower startup (more tools loaded)
+# ✓ Larger image size (~200MB more)
+#
+# PRODUCTION (Dockerfile.prod):
+# ✗ No debug tools (security)
+# ✗ Only app port exposed (8000)
+# ✓ Runs application immediately (CMD ["python", "main.py"])
+# ✓ Code baked into image (immutable)
+# ✓ Fast startup (minimal tools)
+# ✓ Smaller image size
+# ✓ Health checks enabled
+#
+# ==============================================================================
+# HOW TO USE THIS FILE:
+# ==============================================================================
+#
+# 1. Build the image:
+#    docker compose -f docker-compose.yml -f docker-compose.dev.yml build
+#
+# 2. Run the container:
+#    docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+#
+# 3. Attach VS Code:
+#    - Open project in VS Code
+#    - Dev Containers extension connects automatically
+#    - Or: "Dev Containers: Attach to Running Container"
+#
+# 4. Debug your code:
+#    - Set breakpoints in VS Code
+#    - Press F5 to start debugging
+#    - debugpy connects via port 5678
+#
+# 5. Run tests:
+#    pytest tests/
+#
+# 6. Check code quality:
+#    black . && flake8 . && mypy .
+#
+# ==============================================================================

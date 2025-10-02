@@ -1,0 +1,245 @@
+# ==============================================================================
+# DOCKER COMPOSE PRODUCTION OVERRIDES
+# ==============================================================================
+# This file contains ONLY production-specific configuration differences.
+# It merges with docker-compose.yml to create a secure, optimized production setup.
+#
+# Purpose: Remove dev features, add production optimizations, and enforce
+# security best practices for running in production environments.
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# This follows the Override Pattern:
+# - Base file (docker-compose.yml): 90% of configuration
+# - Override file (this file): 10% of production-specific differences
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# SERVICE OVERRIDES
+# ------------------------------------------------------------------------------
+services:
+  
+  # ----------------------------------------------------------------------------
+  # PYTHON APPLICATION - PRODUCTION HARDENING
+  # ----------------------------------------------------------------------------
+  # Only specify what's DIFFERENT from base configuration
+  # Focus on security, performance, and reliability
+  python-app:
+    
+    # -------------------------------------------------------------------------
+    # BUILD CONFIGURATION
+    # -------------------------------------------------------------------------
+    build:
+      # 🔄 OVERRIDE: Use production Dockerfile instead of base
+      # Dockerfile.prod:
+      # - No debug tools (debugpy, pytest, etc.) → Security
+      # - Health checks enabled → Reliability
+      # - Smaller image size → Faster deployment
+      # - Runs app immediately → No idle containers
+      # Path is relative to context (./src) not to this file!
+      dockerfile: Dockerfile.prod
+    
+    # -------------------------------------------------------------------------
+    # CONTAINER NAME
+    # -------------------------------------------------------------------------
+    # 🔄 OVERRIDE: Add "-prod" suffix to distinguish from dev
+    # This allows running dev and prod side-by-side (for testing migrations)
+    container_name: python-app-prod
+    
+    # -------------------------------------------------------------------------
+    # VOLUME MOUNTS
+    # -------------------------------------------------------------------------
+    # 🔄 OVERRIDE: Empty array = NO volumes mounted
+    # Production uses IMMUTABLE containers:
+    # - Code is baked into the image (not mounted from host)
+    # - Can't accidentally modify running code
+    # - Ensures all instances run identical code
+    # - Better security (no host filesystem access)
+    volumes: []
+    
+    # Why immutable containers?
+    # ✓ Consistency: All instances identical (no drift)
+    # ✓ Security: Can't modify production code at runtime
+    # ✓ Rollback: Easy to revert to previous image
+    # ✓ Scalability: Can spin up identical instances anywhere
+    
+    # -------------------------------------------------------------------------
+    # ENVIRONMENT VARIABLES
+    # -------------------------------------------------------------------------
+    # ⚠️ Arrays are REPLACED! Must repeat base environment variables
+    environment:
+      # 🔄 REPEAT: From base file (required for real-time logs)
+      - PYTHONUNBUFFERED=1
+      # ➕ ADD: Explicitly disable debug mode
+      # Your application should check this and disable debug features
+      - DEBUG=false
+      # ➕ ADD: Production environment marker
+      # Use this for conditional logic: if os.getenv('ENV') == 'production'
+      - ENV=production
+    
+    # Production environment variable best practices:
+    # - Use secrets management (Docker Secrets, HashiCorp Vault)
+    # - Never commit secrets to git
+    # - Use .env files (excluded from git) for local prod testing
+    # - In cloud: Use AWS Secrets Manager, Azure Key Vault, etc.
+    
+    # -------------------------------------------------------------------------
+    # RESTART POLICY
+    # -------------------------------------------------------------------------
+    # 🔄 OVERRIDE: Always restart (even after manual stop)
+    # Base uses "unless-stopped" (more lenient)
+    # Production needs maximum uptime
+    restart: always
+    
+    # Restart policies:
+    # - no: Never restart
+    # - on-failure: Restart only if exits with error
+    # - unless-stopped: Restart unless manually stopped (dev default)
+    # - always: Always restart, even after manual stop (prod default)
+    
+    # -------------------------------------------------------------------------
+    # RESOURCE LIMITS
+    # -------------------------------------------------------------------------
+    # ➕ ADD: Production resource constraints
+    # These are stricter and higher than development
+    deploy:
+      resources:
+        # Maximum resources this container can use
+        limits:
+          cpus: '2.0'      # Max 2 CPU cores (200% of 1 core)
+          memory: 1G       # Max 1 GB RAM
+        # Guaranteed resources (reserved for this container)
+        reservations:
+          cpus: '0.5'      # Reserve 50% of 1 CPU core
+          memory: 256M     # Reserve 256 MB RAM
+    
+    # Why set resource limits?
+    # ✓ Prevents one container from starving others
+    # ✓ Ensures predictable performance
+    # ✓ Helps with capacity planning
+    # ✓ Required for production orchestration (Kubernetes, Swarm)
+
+  # ----------------------------------------------------------------------------
+  # DEV CONTAINER - DISABLE IN PRODUCTION
+  # ----------------------------------------------------------------------------
+  dev-container:
+    deploy:
+      # 🚫 DISABLE: Set replicas to 0 = service won't start
+      replicas: 0
+
+# ==============================================================================
+# WHAT GETS MERGED:
+# ==============================================================================
+#
+# When you run:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up
+#
+# The final configuration for python-app service becomes:
+#
+# python-app:
+#   build:
+#     context: ./src               # From base
+#     dockerfile: Dockerfile.prod   # From prod (overrides base)
+#   container_name: python-app-prod # From prod (overrides base)
+#   ports:
+#     - "8000:8000"                # From base (not overridden)
+#   volumes: []                     # From prod (overrides base, empty!)
+#   environment:
+#     - PYTHONUNBUFFERED=1          # From prod (replaces base array)
+#     - DEBUG=false                # From prod (replaces base array)
+#     - ENV=production             # From prod (replaces base array)
+#   networks:
+#     - app-network                # From base (not overridden)
+#   depends_on:
+#     - python-base                # From base (not overridden)
+#   restart: always                # From prod (overrides base)
+#   deploy:                        # From prod (added)
+#     resources:
+#       limits:
+#         cpus: '2.0'
+#         memory: 1G
+#       reservations:
+#         cpus: '0.5'
+#         memory: 256M
+#
+# ==============================================================================
+# PRODUCTION FEATURES:
+# ==============================================================================
+#
+# ✓ Immutable Containers: Code baked in, not mounted
+# ✓ No Debug Tools: Smaller image, more secure
+# ✓ Health Checks: Automatic recovery from failures (in Dockerfile.prod)
+# ✓ Always Restart: Maximum uptime
+# ✓ Resource Limits: Predictable performance
+# ✓ No SSH Access: dev-container disabled (replicas: 0)
+# ✓ Debug Mode Off: No debug endpoints or verbose logging
+# ✓ Higher Resources: 2 CPUs, 1GB RAM (vs dev: 1 CPU, 512MB)
+#
+# ==============================================================================
+# PRODUCTION DEPLOYMENT CHECKLIST:
+# ==============================================================================
+#
+# Before deploying to production:
+#
+# 1. Security:
+#    ☐ Secrets stored securely (not in code)
+#    ☐ HTTPS enabled (reverse proxy with TLS)
+#    ☐ Debug mode disabled
+#    ☐ Non-root user (already set in Dockerfile)
+#    ☐ Minimal attack surface (no unnecessary ports/tools)
+#
+# 2. Reliability:
+#    ☐ Health checks configured (already in Dockerfile.prod)
+#    ☐ Resource limits set (already in this file)
+#    ☐ Restart policy: always (already in this file)
+#    ☐ Logging configured (stdout/stderr to log aggregation)
+#    ☐ Monitoring configured (metrics, alerts)
+#
+# 3. Performance:
+#    ☐ Production web server (gunicorn, uvicorn, not dev server)
+#    ☐ Multiple workers configured
+#    ☐ Database connection pooling
+#    ☐ Caching enabled (Redis, Memcached)
+#    ☐ CDN for static assets
+#
+# 4. Scalability:
+#    ☐ Stateless containers (no local storage)
+#    ☐ Load balancer configured
+#    ☐ Horizontal scaling ready (can run multiple instances)
+#    ☐ Database can handle load
+#
+# 5. Operations:
+#    ☐ Backup strategy defined
+#    ☐ Disaster recovery plan
+#    ☐ Rollback plan tested
+#    ☐ CI/CD pipeline configured
+#    ☐ On-call rotation established
+#
+# ==============================================================================
+# PRODUCTION COMMANDS:
+# ==============================================================================
+#
+# Deploy to production:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# Zero-downtime deployment:
+#   docker compose -f ... -f ... up -d --no-deps --build python-app
+#
+# View logs:
+#   docker compose -f ... -f ... logs -f python-app
+#
+# Check health:
+#   docker ps  # Check STATUS column for "healthy"
+#   docker inspect python-app-prod | grep Health -A 10
+#
+# Scale horizontally (run multiple instances):
+#   docker compose -f ... -f ... up -d --scale python-app=3
+#
+# Stop:
+#   docker compose -f ... -f ... down
+#
+# Emergency: Stop immediately (no graceful shutdown):
+#   docker compose -f ... -f ... kill
+#
+# ==============================================================================

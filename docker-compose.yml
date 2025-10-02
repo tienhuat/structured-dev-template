@@ -1,0 +1,242 @@
+# ==============================================================================
+# DOCKER COMPOSE BASE CONFIGURATION
+# ==============================================================================
+# This is the BASE configuration containing 90% of shared settings between
+# development and production environments.
+#
+# Purpose: Define common infrastructure and configuration to follow DRY principle
+# (Don't Repeat Yourself)
+#
+# Usage:
+# - Dev:  docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+# - Prod: docker compose -f docker-compose.yml -f docker-compose.prod.yml up
+#
+# Learn more about Docker Compose:
+# - https://docs.docker.com/compose/
+# - https://docs.docker.com/compose/compose-file/
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# SERVICES
+# ------------------------------------------------------------------------------
+# Services are the containers that make up your application
+# Each service is a separate container with its own configuration
+services:
+  
+  # ----------------------------------------------------------------------------
+  # BASE IMAGE BUILDER SERVICE
+  # ----------------------------------------------------------------------------
+  # This service builds the base Docker image that other services extend
+  # It's like a foundation that both dev and prod build upon
+  python-base:
+    build:
+      # Build context: Where to find files for building
+      context: ./src
+      # Which Dockerfile to use (contains base configuration)
+      dockerfile: ./Dockerfile
+    # Tag the built image with a name so other services can reference it
+    image: python-dev-base:latest
+    # Note: This service just builds the image, it doesn't run a container
+
+  # ----------------------------------------------------------------------------
+  # PYTHON APPLICATION SERVICE
+  # ----------------------------------------------------------------------------
+  # Main application container - most settings here are common to dev/prod
+  # Override files will customize specific aspects (dockerfile, ports, volumes)
+  python-app:
+    build:
+      # Where to find files for building this service
+      context: ./src
+      # dockerfile: Intentionally omitted - will be set by override files
+      # - docker-compose.dev.yml sets: dockerfile: Dockerfile.dev
+      # - docker-compose.prod.yml sets: dockerfile: Dockerfile.prod
+      
+      # IMPORTANT: Dockerfiles inherit FROM python-dev-base:latest
+      # This dependency ensures base image exists before building
+      # Override files will specify which Dockerfile to use
+    
+    # Container name - will be overridden with environment suffix
+    # dev → python-app-dev, prod → python-app-prod
+    container_name: python-app
+    
+    # Port mapping: host:container
+    # "8000:8000" means:
+    # - Container's port 8000 → Host's port 8000
+    # - Access via http://localhost:8000
+    ports:
+      - "8000:8000"
+    
+    # Volume mounts: Sync files between host and container
+    # Format: host_path:container_path:options
+    volumes:
+      # Mount source code into container
+      # - ./src → local directory on your machine
+      # - /app → path inside container
+      # - cached → performance optimization for macOS/Windows
+      - ./src:/app:cached
+      # Note: prod will override this with empty array (no mounting)
+    
+    # Environment variables passed to the container
+    # These affect how Python and your application behave
+    environment:
+      # PYTHONUNBUFFERED=1: Print output immediately (don't buffer)
+      # This is important for seeing logs in real-time
+      - PYTHONUNBUFFERED=1
+      # Additional env vars (DEBUG, ENV) will be added by override files
+    
+    # Network: Which Docker network this container connects to
+    # Containers on same network can communicate using service names
+    networks:
+      - app-network
+    
+    # Dependency: Start python-base before this service
+    # Ensures base image is built before we try to extend it
+    depends_on:
+      - python-base
+    
+    # Restart policy: When to restart the container
+    # unless-stopped: Restart unless manually stopped
+    # Note: prod will override this with "always"
+    restart: unless-stopped
+
+  # ----------------------------------------------------------------------------
+  # VS CODE DEV CONTAINER SERVICE
+  # ----------------------------------------------------------------------------
+  # Special container for VS Code remote development
+  # Provides complete development environment with all tools
+  dev-container:
+    build: 
+      # Build from devcontainer configuration
+      context: .devcontainer/
+    
+    container_name: python-dev-env
+    
+    # SSH port for remote development
+    # Port 22 (SSH) in container → Port 2222 on host
+    ports:
+      - "2222:22"
+    
+    # Mount entire workspace for development
+    volumes:
+      # Mount project root → /workspace in container
+      - .:/workspace:cached
+      # Persist VS Code Server data (extensions, settings)
+      # Named volume: survives container deletion
+      - vscode_server:/home/vscode/.vscode-server
+    
+    environment:
+      # Set default shell to bash
+      - SHELL=/bin/bash
+    
+    # Connect to same network as application
+    # Can access python-app via http://python-app:8000
+    networks:
+      - app-network
+    
+    # Wait for base image to be ready
+    depends_on:
+      - python-base
+    
+    # Note: prod will disable this service (replicas: 0)
+
+# ------------------------------------------------------------------------------
+# NETWORKS
+# ------------------------------------------------------------------------------
+# Docker networks allow containers to communicate with each other
+# Containers on same network can use service names as hostnames
+networks:
+  app-network:
+    # Bridge network: Standard network type for container communication
+    driver: bridge
+    # Custom name (easier to identify in docker network ls)
+    name: python-app-network
+    # Example usage: From dev-container, access app at http://python-app:8000
+
+# ------------------------------------------------------------------------------
+# VOLUMES
+# ------------------------------------------------------------------------------
+# Named volumes persist data even when containers are deleted
+# Unlike bind mounts (./src:/app), these are managed by Docker
+volumes:
+  vscode_server:
+    # Stores VS Code Server extensions and settings
+    # Persists across container rebuilds
+    name: python-app-vscode-server
+
+# ==============================================================================
+# DOCKER COMPOSE OVERRIDE PATTERN:
+# ==============================================================================
+#
+# This file contains COMMON configuration (90% of settings)
+# Override files contain ENVIRONMENT-SPECIFIC differences (10% of settings)
+#
+# BASE (this file):
+# ├── service definitions
+# ├── common ports
+# ├── common volumes
+# ├── common environment variables
+# ├── networks
+# └── volumes
+#
+# DEVELOPMENT (docker-compose.dev.yml):
+# ├── dockerfile: Dockerfile.dev (adds debug tools)
+# ├── ports: +5678 (debug port)
+# ├── environment: +DEBUG=true
+# └── resource limits: light (1 CPU, 512MB RAM)
+#
+# PRODUCTION (docker-compose.prod.yml):
+# ├── dockerfile: Dockerfile.prod (no debug tools)
+# ├── volumes: [] (no code mounting)
+# ├── environment: +DEBUG=false
+# ├── restart: always
+# ├── resource limits: heavier (2 CPU, 1GB RAM)
+# └── dev-container: replicas=0 (disabled)
+#
+# ==============================================================================
+# HOW DOCKER COMPOSE MERGING WORKS:
+# ==============================================================================
+#
+# When you use multiple compose files:
+# docker compose -f base.yml -f override.yml up
+#
+# Docker Compose merges them:
+# 1. MAPS (key-value): Merged together (later file wins on conflicts)
+# 2. ARRAYS (lists): REPLACED entirely by override file
+# 3. SCALARS (strings/numbers): REPLACED by override file
+#
+# Example:
+# base.yml:       environment: [A=1, B=2]
+# override.yml:   environment: [A=999, C=3]
+# Result:         environment: [A=999, C=3]  # B=2 is lost!
+#
+# That's why override files must repeat array items they want to keep!
+#
+# ==============================================================================
+# COMMANDS REFERENCE:
+# ==============================================================================
+#
+# Build and start (development):
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+#
+# Build and start (production):
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# Rebuild after changes:
+#   docker compose -f ... -f ... up -d --build
+#
+# View logs:
+#   docker compose -f ... -f ... logs -f
+#
+# Stop containers:
+#   docker compose -f ... -f ... down
+#
+# Stop and remove volumes:
+#   docker compose -f ... -f ... down -v
+#
+# List running containers:
+#   docker compose -f ... -f ... ps
+#
+# Execute command in container:
+#   docker compose -f ... -f ... exec python-app python --version
+#
+# ==============================================================================

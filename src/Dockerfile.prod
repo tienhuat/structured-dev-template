@@ -1,0 +1,132 @@
+# ==============================================================================
+# PRODUCTION DOCKERFILE - EXTENDS BASE WITH PRODUCTION OPTIMIZATIONS
+# ==============================================================================
+# This Dockerfile extends the base Dockerfile with production-specific features.
+# It's intentionally minimal - only adding what's necessary for production.
+#
+# Purpose: Create a secure, optimized production environment WITHOUT debug tools
+# or development dependencies that could be security risks.
+#
+# Build Pattern: Base → Prod (inheritance/extension pattern)
+# ==============================================================================
+
+# -----------------------------------------------------------------------------
+# INHERITANCE: EXTEND BASE IMAGE
+# -----------------------------------------------------------------------------
+# Start FROM the same base image as development
+# This ensures dev and prod use identical:
+# - Python version
+# - System packages
+# - Application dependencies
+# - Application code
+# - User permissions
+#
+# Differences from dev are ADDITIONS only (health checks), not modifications!
+FROM python-dev-base:latest
+
+# -----------------------------------------------------------------------------
+# STAY AS NON-ROOT USER
+# -----------------------------------------------------------------------------
+# Base Dockerfile already set USER appuser
+# We stay as appuser throughout (security best practice)
+# Production doesn't need to install additional packages
+
+# -----------------------------------------------------------------------------
+# HEALTH CHECK
+# -----------------------------------------------------------------------------
+# Docker periodically checks if the container is healthy
+# This enables automatic restart of unhealthy containers
+#
+# Options explained:
+# --interval=30s:     Check every 30 seconds
+# --timeout=3s:       Wait max 3 seconds for response
+# --start-period=5s:  Grace period during startup (don't fail immediately)
+# --retries=3:        Mark unhealthy after 3 consecutive failures
+#
+# The command:
+# - Makes HTTP request to /health endpoint
+# - Returns 0 (success) if request succeeds
+# - Returns 1 (failure) if request fails or times out
+#
+# Note: Your application needs to implement /health endpoint!
+# Example: return {"status": "healthy"} from /health route
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD python -c "import requests; requests.get('http://localhost:8000/health', timeout=2)" || exit 1
+
+# -----------------------------------------------------------------------------
+# NETWORK PORTS
+# -----------------------------------------------------------------------------
+# Only expose application port in production
+# NO debug port (5678) - reduces attack surface
+EXPOSE 8000
+
+# Security principle: Minimize exposed services
+# If you don't need a port, don't expose it!
+
+# -----------------------------------------------------------------------------
+# PRODUCTION STARTUP COMMAND
+# -----------------------------------------------------------------------------
+# Run the application immediately when container starts
+CMD ["python", "main.py"]
+
+# ==============================================================================
+# PRODUCTION SECURITY PRINCIPLES:
+# ==============================================================================
+#
+# ✓ No debug tools: Can't be exploited by attackers
+# ✓ No debug ports: Reduces attack surface
+# ✓ Non-root user: Limits damage from container escape
+# ✓ Health checks: Automatic recovery from failures
+# ✓ Immutable code: Baked into image, can't be modified at runtime
+# ✓ Minimal image: Fewer packages = fewer vulnerabilities
+# ✓ Clear CMD: Container does one thing and does it well
+#
+# ==============================================================================
+# PRODUCTION vs DEVELOPMENT DIFFERENCES:
+# ==============================================================================
+#
+# PRODUCTION (this file):
+# ✓ Health checks enabled (automatic recovery)
+# ✓ Only app port exposed (8000)
+# ✓ Runs application immediately
+# ✓ No debug tools (security)
+# ✓ Smaller image size
+# ✓ Code baked in (immutable)
+# ✓ Fast startup
+# ✓ Restart: always (in compose file)
+#
+# DEVELOPMENT (Dockerfile.dev):
+# ✗ No health checks (not needed for dev)
+# ✓ Debug port exposed (5678)
+# ✓ Container stays idle (tail -f /dev/null)
+# ✓ Debug tools installed (debugpy, pytest, etc.)
+# ✓ Larger image size
+# ✓ Code mounted from host (editable)
+# ✓ Slower startup (more tools)
+# ✓ Restart: unless-stopped (in compose file)
+#
+# ==============================================================================
+# HOW TO USE THIS FILE:
+# ==============================================================================
+#
+# 1. Build production image:
+#    docker compose -f docker-compose.yml -f docker-compose.prod.yml build
+#
+# 2. Run in production:
+#    docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# 3. Check health:
+#    docker ps  # Shows health status in STATUS column
+#    docker inspect python-app-prod | grep Health -A 10
+#
+# 4. View logs:
+#    docker compose -f docker-compose.yml -f docker-compose.prod.yml logs -f
+#
+# 5. Production deployment:
+#    - Use a reverse proxy (nginx, Caddy) in front
+#    - Enable HTTPS with Let's Encrypt
+#    - Set up monitoring (Prometheus, Grafana)
+#    - Configure log aggregation (ELK stack, Loki)
+#    - Set resource limits (in docker-compose.prod.yml)
+#
+# ==============================================================================
