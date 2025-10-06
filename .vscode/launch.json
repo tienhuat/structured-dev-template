@@ -20,11 +20,42 @@
     "configurations": [
         {
             // ------------------------------------------------------------------
-            // BASIC PYTHON DEBUG CONFIGURATION
+            // REMOTE DEBUGGING - PYTHON APP CONTAINER
             // ------------------------------------------------------------------
             
             // Name shown in the debug dropdown (F5 or Run menu)
-            "name": "Run Hello World",
+            "name": "Remote Debug: Python App Container",
+            
+            // Type of debugger to use
+            "type": "debugpy",
+            
+            // Attach to already running process with debugpy
+            "request": "attach",
+            
+            // Connect to debugpy server running in python-app container
+            "connect": {
+                "host": "python-app",  // Container name from docker-compose
+                "port": 5678           // debugpy port
+            },
+            
+            // Path mappings between container and local workspace
+            "pathMappings": [
+                {
+                    "localRoot": "${workspaceFolder}/src",
+                    "remoteRoot": "/app"
+                }
+            ],
+            
+            // Don't require confirmation before attaching
+            "justMyCode": false
+        },
+        {
+            // ------------------------------------------------------------------
+            // LOCAL DEBUGGING (Legacy - for running in dev container directly)
+            // ------------------------------------------------------------------
+            
+            // Name shown in the debug dropdown (F5 or Run menu)
+            "name": "Local Debug: Run in Dev Container",
             
             // Type of debugger to use
             // "debugpy" is the modern Python debugger (replaces older "python")
@@ -64,7 +95,13 @@
             
             // Automatically load environment variables from .env file
             // This solves the issue where direnv variables aren't available in debugger
-            "envFile": "${workspaceFolder}/.env"
+            "envFile": "${workspaceFolder}/.env",
+            
+            // ------------------------------------------------------------------
+            // NOTE: Use "Remote Debug: Python App Container" instead
+            // ------------------------------------------------------------------
+            // This configuration runs Python directly in the dev container.
+            // The recommended approach is remote debugging to the python-app container.
             
             // ------------------------------------------------------------------
             // ADDITIONAL OPTIONS (commented out - add as needed)

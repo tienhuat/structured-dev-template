@@ -168,7 +168,11 @@
     // IMPORTANT: Use bash explicitly because /bin/sh doesn't support 'source'
     // The virtual environment is already created in the Dockerfile
     // This installs the project in editable mode from the src/ directory
-    "postCreateCommand": "bash -c 'cd src && source /home/vscode/.venv/bin/activate && uv pip install -e .'",
+    "postCreateCommand": "bash -c 'cd src && source /home/vscode/.venv/bin/activate && uv pip install -e . && cd /workspace && direnv allow .'",
+
+    // Command to run after attaching to the container (every time)
+    // Ensures direnv is loaded and environment is set up
+    "postAttachCommand": "bash -c 'cd /workspace && direnv allow . 2>/dev/null || true'",
 
     // --------------------------------------------------------------------------
     // REMOTE USER

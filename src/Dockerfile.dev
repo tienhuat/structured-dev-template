@@ -84,13 +84,20 @@ EXPOSE 5678
 # -----------------------------------------------------------------------------
 # DEVELOPMENT STARTUP COMMAND
 # -----------------------------------------------------------------------------
-# Keep container running indefinitely without executing the application
-# This allows:
-# - VS Code to connect and start debugging sessions
-# - Interactive development (run commands manually)
-# - Restart application without restarting container
-# - Use VS Code's integrated terminal inside the container
-CMD ["tail", "-f", "/dev/null"]
+# Start application with debugpy, waiting for debugger to attach
+# This allows VS Code to connect and debug the running application
+#
+# debugpy options:
+# --listen 0.0.0.0:5678  - Listen on all interfaces, port 5678
+# --wait-for-client      - Don't start the app until debugger attaches
+# main.py                - The Python script to debug
+#
+# Benefits:
+# - Application runs in its own container (proper isolation)
+# - VS Code debugger attaches remotely
+# - Set breakpoints, inspect variables, step through code
+# - Reflects real production environment (separate containers)
+CMD ["python", "-m", "debugpy", "--listen", "0.0.0.0:5678", "--wait-for-client", "main.py"]
 
 # ==============================================================================
 # DEVELOPMENT vs PRODUCTION DIFFERENCES:

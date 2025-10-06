@@ -193,12 +193,20 @@ dev-container/
 - Contains: SSH server, development tools, build tools
 - User: `vscode` (with sudo access)
 - Usage: VS Code connects for interactive development
+- Identifier: `/etc/container-name` contains `dev-container`
 
 **2. Application Containers** (`src/Dockerfile*`):
 - Purpose: Run the Python application
 - Variants: Base (shared), Dev (with debugpy), Prod (optimized)
 - User: `appuser` (no sudo, security)
 - Usage: Direct container execution or production deployment
+- Identifier: `/etc/container-name` contains `python-app`
+
+**Container Detection:**
+- Each container includes an identifier file at `/etc/container-name`
+- The application automatically detects which container it's running in
+- Useful for debugging and understanding execution context
+- See `docs/container-detection.md` for detailed documentation
 
 ---
 
@@ -410,27 +418,31 @@ uv pip install -e ".[dev]"
 # The ".[dev]" tells uv to also install optional dev dependencies
 # (black, flake8, pytest, mypy, etc.)
 ```
-```
 
-### Running Python Code
+### Debugging with Remote Debugging
 
-Once connected (either method):
-```bash
-# In VS Code terminal
-cd /workspace
-python main.py
+This project uses a **separated container architecture** for debugging:
 
-# Add new dependencies (uv is 10-100x faster than pip)
-uv add package-name
+- **Dev Container** (VS Code Server only) - Hosts VS Code, no Python execution
+- **Python App Container** - Runs your application with debugpy, waits for debugger
 
-# Install production dependencies only
-uv pip install -e .
+**Quick Start:**
+1. Reopen in Dev Container (VS Code connects to dev container)
+2. Press `F5` or select "Remote Debug: Python App Container"
+3. VS Code attaches to the python-app container running debugpy
+4. Set breakpoints and debug as normal!
 
-# Install production + development dependencies
-uv pip install -e ".[dev]"
-# The ".[dev]" tells uv to also install optional dev dependencies
-# (black, flake8, pytest, mypy, etc.)
-```
+**Benefits:**
+- ✅ Production-like architecture (separate containers)
+- ✅ Proper container isolation
+- ✅ Application runs in its own environment
+- ✅ Container detection shows execution context
+
+**📖 Full Documentation:** See [docs/remote-debugging.md](docs/remote-debugging.md) for:
+- Architecture diagrams
+- Detailed setup instructions
+- Troubleshooting guide
+- Advanced debugging techniques
 
 ## 📦 Docker Compose Overrides (Advanced)
 

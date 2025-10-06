@@ -155,6 +155,12 @@ RUN groupadd --gid 1000 appuser \
 # - Simplifies file permissions when mounting volumes
 
 # -----------------------------------------------------------------------------
+# CONTAINER IDENTIFIER
+# -----------------------------------------------------------------------------
+# Create an identifier file to detect which container main.py is running in
+RUN echo "python-app" > /etc/container-name && chmod 644 /etc/container-name
+
+# -----------------------------------------------------------------------------
 # SWITCH TO NON-ROOT USER
 # -----------------------------------------------------------------------------
 # Switch from root to appuser for all subsequent operations

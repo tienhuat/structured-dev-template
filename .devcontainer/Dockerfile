@@ -44,6 +44,13 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # -----------------------------------------------------------------------------
+# INSTALL DIRENV
+# -----------------------------------------------------------------------------
+# Install direnv from official binary releases (more reliable than apt)
+# direnv automatically loads environment variables from .envrc files
+RUN curl -sfL https://direnv.net/install.sh | bash
+
+# -----------------------------------------------------------------------------
 # INSTALL UV PACKAGE MANAGER
 # -----------------------------------------------------------------------------
 # Install uv to a system-wide location accessible by all users
@@ -179,7 +186,27 @@ WORKDIR /workspace
 # uv is now available system-wide at /usr/local/bin/uv
 RUN uv venv /home/vscode/.venv \
     # Auto-activate virtual environment in bash shells
-    && echo 'source /home/vscode/.venv/bin/activate' >> /home/vscode/.bashrc
+    && echo 'source /home/vscode/.venv/bin/activate' >> /home/vscode/.bashrc \
+    # Initialize direnv hook for automatic .envrc loading
+    && echo 'eval "$(direnv hook bash)"' >> /home/vscode/.bashrc \
+    # Also add to .bash_profile for login shells
+    && echo 'source /home/vscode/.venv/bin/activate' >> /home/vscode/.bash_profile \
+    && echo 'eval "$(direnv hook bash)"' >> /home/vscode/.bash_profile \
+    # Create .config directory for direnv
+    && mkdir -p /home/vscode/.config/direnv \
+    # Configure direnv to load .envrc files automatically
+    && echo '[whitelist]' > /home/vscode/.config/direnv/config.toml \
+    && echo 'prefix = [ "/workspace" ]' >> /home/vscode/.config/direnv/config.toml \
+    # Create a profile.d script for system-wide direnv initialization
+    && echo '#!/bin/bash' > /home/vscode/.profile \
+    && echo 'source ~/.bashrc' >> /home/vscode/.profile
+
+# -----------------------------------------------------------------------------
+# CONTAINER IDENTIFIER
+# -----------------------------------------------------------------------------
+# Create an identifier file to detect which container main.py is running in
+USER root
+RUN echo "dev-container" > /etc/container-name && chmod 644 /etc/container-name
 
 # -----------------------------------------------------------------------------
 # EXPOSE SSH PORT

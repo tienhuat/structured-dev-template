@@ -5,6 +5,14 @@ Python application demonstrating environment variable usage with direnv.
 This application reads configuration from environment variables that are
 injected externally, following production best practices.
 
+Container Detection:
+    The application automatically detects which container it's running in:
+    - dev-container: VS Code Dev Container (for interactive development)
+    - python-app: Application Container (standalone execution)
+    - host: Running directly on host machine (not containerized)
+    
+    Detection uses /etc/container-name file created during Docker build.
+
 Environment Variables:
     APP_NAME: Application name (required)
     APP_ENV: Environment (dev/staging/prod, default: dev)
@@ -83,6 +91,22 @@ def get_int_env(key: str, default: int) -> int:
         return default
 
 
+def get_container_name() -> str:
+    """
+    Detect which container this code is running in.
+    
+    Returns:
+        Container name from /etc/container-name, or 'host' if not in container
+    """
+    try:
+        with open('/etc/container-name', 'r') as f:
+            return f.read().strip()
+    except FileNotFoundError:
+        return 'host'
+    except Exception as e:
+        return f'unknown ({e})'
+
+
 def print_config():
     """
     Display current configuration loaded from environment variables.
@@ -90,6 +114,17 @@ def print_config():
     print("\n" + "="*60)
     print("🔧 Application Configuration")
     print("="*60)
+    
+    # Display container information
+    container = get_container_name()
+    if container == 'dev-container':
+        print(f"🐳 Container:     {container} (VS Code Dev Container)")
+    elif container == 'python-app':
+        print(f"🐳 Container:     {container} (Application Container)")
+    elif container == 'host':
+        print(f"💻 Running on:    Host machine (not in container)")
+    else:
+        print(f"🐳 Container:     {container}")
     
     # Required variables
     try:
